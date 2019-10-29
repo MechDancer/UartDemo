@@ -15,7 +15,7 @@ class Uart(context: Context) {
         const val ACTION_USB_PERMISSION = "org.mechdancer.uartdemo.USB_PERMISSION"
     }
 
-    private val driver =
+    val driver =
         CH34xUARTDriver(
             context.getSystemService(Context.USB_SERVICE) as UsbManager,
             context,
@@ -71,12 +71,14 @@ class Uart(context: Context) {
     /**
      * 读取 [size] 字节
      */
-    fun read(size: Int): ByteArray {
+    fun read(size: Int = 4096): ByteArray? {
         val byteArray = ByteArray(size)
         val n = driver.ReadData(byteArray, size)
-        return if (n < size)
-            byteArray.dropLast(size - n).toByteArray()
-        else byteArray
+        return when {
+            n == 0   -> null
+            n < size -> byteArray.dropLast(size - n).toByteArray()
+            else     -> byteArray
+        }
     }
 
     /**
@@ -134,7 +136,7 @@ class Uart(context: Context) {
         _460800,
         _921600;
 
-        val value by lazy { name.removeSuffix("_").toInt() }
+        val value by lazy { name.removePrefix("_").toInt() }
 
     }
 

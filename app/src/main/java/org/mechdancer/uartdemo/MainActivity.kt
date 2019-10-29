@@ -1,37 +1,45 @@
 package org.mechdancer.uartdemo
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import kotlin.concurrent.thread
 
-class MainActivity : AppCompatActivity() {
+open class MainActivity : AppCompatActivity() {
 
     private lateinit var uart: Uart
 
-    private var thread: Thread? = null
 
-    @Volatile
-    private var running = true
+    fun Any.toast(prefix: String) = Toast.makeText(this@MainActivity, "$prefix: ${toString()}", Toast.LENGTH_SHORT).show()
+    fun Any.log(prefix: String) = Log.w("Uart", "$prefix: ${toString()}")
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         uart = Uart(this)
-        uart.init(Uart.Config())
-        thread = thread {
-            running = true
-            while (running)
-                runOnUiThread {
-                    Toast.makeText(this, String(uart.read(4096)), Toast.LENGTH_LONG).show()
+        uart.requestPermission().log("Permission")
+        uart.getAndOpenDevice().log("Device")
+        uart.initUartDevice().log("Init")
+        uart.setConfig(Uart.Config(
+            baudRate = Uart.BaudRate._19200,
+            parity = 2
+        )).log("Config")
+
+        thread {
+            while (true) {
+                uart.read()?.let {
+                    it.toAsciiString().log("Ascii")
+                    it.toHexString().log("Hex")
                 }
-            running = false
+            }
         }
+
     }
 
+
     override fun onDestroy() {
-        running = false
-        thread = null
         uart.close()
         super.onDestroy()
     }
